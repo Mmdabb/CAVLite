@@ -2,6 +2,7 @@
 #include "Agent.h"
 #include <map>
 #include "Network.h"
+#include "DataLoader.h" 
 
 class Simulation
 {
@@ -9,6 +10,8 @@ public:
 	Simulation()
 	{
 		number_of_agents = 0;
+		new_agents_count = 0;  // Initialize new agent tracking
+		data_loader = nullptr;
 	}
 
 	enum SimulationState {
@@ -17,6 +20,7 @@ public:
 	};
 
 	int number_of_agents;
+	int new_agents_count;  // Tracks how many new agents were added in the last iteration
 	std::vector<Agent> agent_vector;
 
 	std::map<int, int> internal_agent_seq_no_dict;
@@ -36,12 +40,14 @@ public:
 	std::vector<int> agent_index;
 	int current_active_agent_index;
 
-	Network *net;
+	Network* net;
 	std::string cflc_model;
 
-	int *node_predecessor;
-	float *node_label_cost;
-	int *link_predecessor;
+	DataLoader* data_loader;
+
+	int* node_predecessor;
+	float* node_label_cost;
+	int* link_predecessor;
 
 	std::string output_filename;
 
@@ -54,4 +60,7 @@ public:
 
 	void exportSimulationResults();
 
+	// New functions
+	void findPathForNewAgents();  // Assign paths only for new agents
+	void TrafficSimulationStep(int t);  // Run one simulation step for all agents
 };

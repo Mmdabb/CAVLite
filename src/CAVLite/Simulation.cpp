@@ -10,7 +10,7 @@
 void Simulation::SimulationInitialization()
 {
 	simulation_duration = simulation_end_time - simulation_start_time;
-	
+
 	start_simu_interval_no = round(simulation_start_time * 60 / simulation_step); //use relative time to save memory
 	end_simu_interval_no = round(simulation_end_time * 60 / simulation_step);
 	number_of_simu_interval_per_min = round(60.0 / simulation_step);
@@ -27,9 +27,9 @@ void Simulation::SimulationInitialization()
 
 
 	// ----------------- micro origin for each agent---------------------//
-	MesoNode *start_node;
-	MesoLink *start_link;
-	Agent *p_agent;
+	MesoNode* start_node;
+	MesoLink* start_link;
+	Agent* p_agent;
 	int seq_no;
 
 	for (int i = 0; i < number_of_agents; i++)
@@ -68,8 +68,8 @@ int Simulation::MacroShortestPath(int origin_node_id, int destination_node_id)
 	std::queue<int> SEList;
 	SEList.push(origin_node_seq_no);
 
-	MesoNode *from_node, *to_node;
-	MesoLink *outgoing_link;
+	MesoNode* from_node, * to_node;
+	MesoLink* outgoing_link;
 	while (!SEList.empty())
 	{
 		int from_node_seq_no = SEList.front();
@@ -104,7 +104,7 @@ void Simulation::findPathForAgents(int iteration_no)
 {
 	for (int i = 0; i < number_of_agents; i++)
 	{
-		Agent *p_agent = &agent_vector[i];
+		Agent* p_agent = &agent_vector[i];
 
 		//if (p_agent->agent_id == 130)
 		//{
@@ -179,6 +179,71 @@ void Simulation::findPathForAgents(int iteration_no)
 }
 
 
+void Simulation::findPathForNewAgents()
+{
+	for (int i = number_of_agents - new_agents_count; i < number_of_agents; i++)  // Only for new agents
+	{
+		Agent* p_agent = &agent_vector[i];
+
+		if (p_agent->m_no_physical_path_flag) continue;
+
+		if (p_agent->fixed_path_flag)
+		{
+			// If agent has a predefined path, update its assigned flow
+			int number_of_links_in_path = p_agent->meso_path_link_seq_no_vector.size();
+			for (int j = 0; j < number_of_links_in_path; j++)
+				net->meso_link_vector[p_agent->meso_path_link_seq_no_vector[j]].flow_volume += 1;
+			continue;
+		}
+
+		// Assign shortest path for the agent based on current traffic
+		int SP_flag = MacroShortestPath(p_agent->meso_origin_node_id, p_agent->meso_destination_node_id);
+
+		if (SP_flag == -1)
+		{
+			std::cout << "No physical path for agent " << p_agent->agent_id << " from node "
+				<< p_agent->meso_origin_node_id << " to node " << p_agent->meso_destination_node_id << "\n";
+			p_agent->m_no_physical_path_flag = true;
+			continue;
+		}
+
+		// Store path information for the new agent
+		int current_node_seq_no = net->meso_node_id_to_seq_no_dict[p_agent->meso_destination_node_id];
+		p_agent->path_cost = node_label_cost[current_node_seq_no];
+		int current_link_seq_no;
+
+		std::vector<int> meso_path_node_seq_no_vector_r;
+		std::vector<int> meso_path_link_seq_no_vector_r;
+
+		while (current_node_seq_no >= 0)
+		{
+			if (current_node_seq_no >= 0)
+			{
+				current_link_seq_no = link_predecessor[current_node_seq_no];
+
+				if (current_link_seq_no >= 0)
+					meso_path_link_seq_no_vector_r.push_back(current_link_seq_no);
+
+				meso_path_node_seq_no_vector_r.push_back(current_node_seq_no);
+			}
+
+			current_node_seq_no = node_predecessor[current_node_seq_no];
+		}
+
+		for (int j = meso_path_node_seq_no_vector_r.size() - 1; j >= 0; j--)
+			p_agent->meso_path_node_seq_no_vector.push_back(meso_path_node_seq_no_vector_r[j]);
+		for (int j = meso_path_link_seq_no_vector_r.size() - 1; j >= 0; j--)
+			p_agent->meso_path_link_seq_no_vector.push_back(meso_path_link_seq_no_vector_r[j]);
+
+		// Update network flow for new agent
+		int number_of_links_in_path = p_agent->meso_path_link_seq_no_vector.size();
+		for (int j = 0; j < number_of_links_in_path; j++)
+			net->meso_link_vector[p_agent->meso_path_link_seq_no_vector[j]].flow_volume += 1;
+	}
+}
+
+
+
 void Simulation::TrafficAssignment()
 {
 	std::cout << "Traffic Assignment...";
@@ -218,7 +283,7 @@ void Simulation::TrafficSimulation()
 
 		for (int i = 0; i < active_agent_vector.size(); i++)
 		{
-			Agent *p_agent = &agent_vector[active_agent_vector[i]];
+			Agent* p_agent = &agent_vector[active_agent_vector[i]];
 			if (p_agent->m_Veh_LinkDepartureTime_in_simu_interval.back() == t)
 			{
 				agent_idd = p_agent->agent_id;
@@ -231,19 +296,19 @@ void Simulation::TrafficSimulation()
 
 		}
 
-		for (int j = 0; j < agent_remove_vector.size(); j++){
-			for (std::vector<int>::iterator it = active_agent_vector.begin(); it != active_agent_vector.end(); it++){
-				if (*it == agent_remove_vector[j]){
+		for (int j = 0; j < agent_remove_vector.size(); j++) {
+			for (std::vector<int>::iterator it = active_agent_vector.begin(); it != active_agent_vector.end(); it++) {
+				if (*it == agent_remove_vector[j]) {
 					active_agent_vector.erase(it);
 					break;
 				}
 			}
 		}
 
-		if (cumulative_count%print_frequency == 0)
+		if (cumulative_count % print_frequency == 0)
 		{
 			simulation_min = t * simulation_step / 60.0;
-			printf("\rTraffic Simulation...%.1f|%.1f(current time|end time)",simulation_min,simulation_end_time);
+			printf("\rTraffic Simulation...%.1f|%.1f(current time|end time)", simulation_min, simulation_end_time);
 		}
 		cumulative_count++;
 
@@ -252,15 +317,65 @@ void Simulation::TrafficSimulation()
 }
 
 
+
+void Simulation::TrafficSimulationStep(int t)
+{
+	// Process agents moving in the network
+	for (int i = 0; i < active_agent_vector.size(); i++)
+	{
+		Agent* p_agent = &agent_vector[active_agent_vector[i]];
+
+		if (p_agent->m_Veh_LinkDepartureTime_in_simu_interval.back() == t)
+		{
+			if (cflc_model == "CACF")
+				VehControllerCA::moveVeh(p_agent, t);
+
+			if (p_agent->remove_flag)
+				active_agent_vector.erase(active_agent_vector.begin() + i);
+		}
+	}
+
+	// Update link travel times based on updated flow
+	for (int j = 0; j < net->number_of_meso_links; j++)
+	{
+		net->meso_link_vector[j].CalculateBPRFunctionAndCost();
+	}
+}
+
+
 void Simulation::loadVehicles(int t)
 {
 	if ((t - start_simu_interval_no) % number_of_simu_interval_per_min == 0)
 	{
+		// Read new agents from DataLoader
+		std::vector<Agent> new_agents;
+		data_loader->ReadNewAgentsFromFile(t, new_agents);  
+
+		// Sort new agents by departure time (locally, for efficiency)
+		std::sort(new_agents.begin(), new_agents.end(), [](const Agent& a, const Agent& b) {
+			return a.departure_time_in_simu_interval < b.departure_time_in_simu_interval;
+			});
+
+		// Extend agent_vector and agent_index
+		for (auto& agent : new_agents)
+		{
+			agent.agent_id = number_of_agents;  // Assign unique ID
+			agent_vector.push_back(agent);
+			agent_index.push_back(number_of_agents);  // Maintain index consistency
+			number_of_agents++;
+
+			// Immediately activate agent if they are due for departure
+			if (agent.departure_time_in_simu_interval == t)
+			{
+				active_agent_vector.push_back(agent.agent_id);
+			}
+		}
+
 		while (current_active_agent_index < number_of_agents &&
 			agent_vector[agent_index[current_active_agent_index]].departure_time_in_simu_interval >= t &&
 			agent_vector[agent_index[current_active_agent_index]].departure_time_in_simu_interval < t + number_of_simu_interval_per_min)
 		{
-			Agent *p_agent = &agent_vector[agent_index[current_active_agent_index]];
+			Agent* p_agent = &agent_vector[agent_index[current_active_agent_index]];
 			if (p_agent->m_no_physical_path_flag)
 			{
 				current_active_agent_index++;
@@ -287,6 +402,8 @@ void Simulation::loadVehicles(int t)
 }
 
 
+
+
 void Simulation::exportSimulationResults()
 {
 	std::cout << "Outputing Simulation Results...";
@@ -304,7 +421,7 @@ void Simulation::exportSimulationResults()
 
 	for (int i = 0; i < number_of_agents; i++)
 	{
-		Agent *p_agent = &agent_vector[i];
+		Agent* p_agent = &agent_vector[i];
 
 		if (!p_agent->m_bGenereated) continue;
 

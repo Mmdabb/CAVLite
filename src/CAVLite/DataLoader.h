@@ -13,6 +13,7 @@ public:
 	std::string meso_link_filepath;
 
 	std::string agent_filepath;
+	std::string new_agent_filepath;  // to store file path for new agents
 	std::string flow_filepath;
 
 	Simulation *simulator;
@@ -25,4 +26,8 @@ public:
 	void readSignal();
 	void readAgent();
 	void readFlow();
+
+	// New Function: Reads new agents dynamically
+	void ReadNewAgentsFromFile(int t, std::vector<Agent>& new_agents);
+
 };

@@ -694,3 +694,147 @@ void DataLoader::readFlow()
 	string msg = "flow demand is not supported now.\n";
 	throw msg;
 }
+
+
+
+
+void DataLoader::ReadNewAgentsFromFile(int t, std::vector<Agent>& new_agents)
+{
+	cout << "Loading New Agents\n";
+	simulator->new_agents_count = 0;
+	CCSVParser parser_agent;
+	if (parser_agent.OpenCSVFile(new_agent_filepath, true))
+	{	
+		int agent_id;
+		float volume, volume_fraction;
+		int volume_int;
+		int o_node_id, d_node_id, o_node_no, d_node_no, o_zone_id, d_zone_id;
+		string time_period, node_sequence, link_sequence;
+		string demand_start_time, demand_end_time;
+		float demand_start_time_decimal, demand_end_time_decimal, demand_duration;
+		float departure_time_in_min;
+
+		int node_id_int;
+		string link_key;
+
+		default_random_engine e;
+		e.seed((unsigned)time(NULL));
+		uniform_real_distribution<float> u(0.0, 1.0);
+		float random_num;
+
+		map<int, int>::iterator iter1;
+		map<string, int>::iterator iter2;
+		bool fixed_path_flag, path_valid_flag;
+
+		MesoNode* start_node;
+
+		while (parser_agent.ReadRecord())
+		{
+			parser_agent.GetValueByFieldName("agent_id", agent_id);
+			parser_agent.GetValueByFieldName("o_node_id", o_node_id);
+			parser_agent.GetValueByFieldName("d_node_id", d_node_id);
+			parser_agent.GetValueByFieldName("o_node_id", o_zone_id);
+			parser_agent.GetValueByFieldName("d_node_id", d_zone_id);
+			parser_agent.GetValueByFieldName("departure_time", departure_time_in_min);
+			parser_agent.GetValueByFieldName("volume", volume);
+			fixed_path_flag = parser_agent.GetValueByFieldName("node_sequence", node_sequence);
+
+			iter1 = net->meso_node_id_to_seq_no_dict.find(o_node_id);
+			if (iter1 == net->meso_node_id_to_seq_no_dict.end()) {
+				cout << "warning: from_origin_node_id " << o_node_id << "does not exist, corresponding demand will be discarded. (agent id " << agent_id << ")\n";
+				continue;
+			}
+			o_node_no = iter1->second;
+			start_node = &net->meso_node_vector[o_node_no];
+			if (start_node->m_outgoing_link_vector.size() == 0) {
+				cout << "warning: cannot find an outgoing link from origin node " << o_node_id << ", corresponding demand will be discarded. (agent id " << agent_id << ")\n";
+				continue;
+			}
+
+			iter1 = net->meso_node_id_to_seq_no_dict.find(d_node_id);
+			if (iter1 == net->meso_node_id_to_seq_no_dict.end()) {
+				cout << "warning: to_destination_node_id " << d_node_id << "does not exist, corresponding demand will be discarded. (agent id " << agent_id << ")\n";
+				continue;
+			}
+			d_node_no = iter1->second;
+
+			path_valid_flag = true;
+			vector<int> meso_path_node_no_vector, meso_path_link_seq_no_vector;
+			if (fixed_path_flag)
+			{
+				vector<string> node_sequence_str;
+				SplitString(node_sequence, node_sequence_str, ";");
+
+				for (string id_str : node_sequence_str)
+				{
+					node_id_int = stoi(id_str);
+					iter1 = net->meso_node_id_to_seq_no_dict.find(node_id_int);
+					if (iter1 == net->meso_node_id_to_seq_no_dict.end()) {
+						cout << "warning: node_id " << node_id_int << "in the node_sequence does not exist, corresponding demand will be discarded. (agent id " << agent_id << ")\n";
+						path_valid_flag = false;
+						break;
+					}
+					meso_path_node_no_vector.push_back(iter1->second);
+				}
+				for (int i = 1; i < node_sequence_str.size(); i++)
+				{
+					link_key = node_sequence_str[i - 1] + " " + node_sequence_str[i];
+					iter2 = net->meso_link_key_to_seq_no_dict.find(link_key);
+					if (iter2 == net->meso_link_key_to_seq_no_dict.end()) {
+						cout << "warning: node pair " << node_sequence_str[i - 1] << "-" << node_sequence_str[i] << " in the node_sequence does not exist, corresponding demand will be discarded. (agent id " << agent_id << ")\n";
+						path_valid_flag = false;
+						break;
+					}
+					meso_path_link_seq_no_vector.push_back(iter2->second);
+				}
+
+				if (!path_valid_flag)
+					continue;
+			}
+
+
+			random_num = u(e);
+			volume_fraction = volume - (int)volume;
+			if (volume_fraction >= random_num)
+				volume_int = ceil(volume);
+			else
+				volume_int = floor(volume);
+
+
+			for (int i = 0; i < volume_int; i++)
+			{
+				Agent agent;
+				agent.meso_origin_node_id = o_node_id;
+				agent.meso_destination_node_id = d_node_id;
+				agent.meso_origin_node_seq_no = o_node_no;
+				agent.meso_destination_node_seq_no = d_node_no;
+				agent.origin_zone_id = o_zone_id;
+				agent.destination_zone_id = d_zone_id;
+				agent.departure_time_in_min = departure_time_in_min;
+				agent.departure_time_in_simu_interval = round(agent.departure_time_in_min * 60 / simulator->simulation_step);
+
+
+				if (fixed_path_flag) {
+					agent.fixed_path_flag = true;
+					agent.meso_path_node_seq_no_vector = meso_path_node_no_vector;
+					agent.meso_path_link_seq_no_vector = meso_path_link_seq_no_vector;
+				}
+
+				if (agent.departure_time_in_simu_interval >= t)
+				{
+					new_agents.push_back(agent);
+					simulator->new_agents_count++;
+				}
+			}
+
+		}
+	}
+	else
+	{
+		string msg = "Cannot open New Agent file\n";
+		throw msg;
+	}
+
+	cout << "New Agents Loaded: ";
+	cout << simulator->new_agents_count << " new agents\n\n";
+}
