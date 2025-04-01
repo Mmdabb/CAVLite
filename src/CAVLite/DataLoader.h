@@ -3,6 +3,7 @@
 #include <string>
 #include "Simulation.h"
 #include "Network.h"
+#include "Agent.h"
 
 class DataLoader
 {
@@ -15,6 +16,9 @@ public:
 	std::string agent_filepath;
 	std::string new_agent_filepath;  // to store file path for new agents
 	std::string flow_filepath;
+
+	std::vector<AgentRawInput> all_raw_agents;
+
 
 	Simulation *simulator;
 	Network *net;
@@ -29,5 +33,6 @@ public:
 
 	// New Function: Reads new agents dynamically
 	void ReadNewAgentsFromFile(int t, std::vector<Agent>& new_agents);
+	void LoadNewAgentsFromMemory(const AgentRawInput* raw_agents, int num_agents, int t, std::vector<Agent>& new_agents);
 
 };

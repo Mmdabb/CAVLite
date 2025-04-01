@@ -378,7 +378,19 @@ void Simulation::loadVehicles(int t)
 	{
 		// Read new agents from DataLoader
 		std::vector<Agent> new_agents;
-		data_loader->ReadNewAgentsFromFile(t, new_agents);  
+		//data_loader->ReadNewAgentsFromFile(t, new_agents);  
+
+		std::vector<AgentRawInput> filtered_inputs;
+		double lower = t * simulation_step;
+		double upper = (t + 1) * simulation_step;
+
+		for (const auto& raw : data_loader->all_raw_agents) {
+			if (raw.departure_time >= lower && raw.departure_time < upper) {
+				filtered_inputs.push_back(raw);
+			}
+		}
+
+		data_loader->LoadNewAgentsFromMemory(filtered_inputs.data(), static_cast<int>(filtered_inputs.size()), t, new_agents);
 
 		// Sort new agents by departure time
 		std::sort(new_agents.begin(), new_agents.end(), [](const Agent& a, const Agent& b) {

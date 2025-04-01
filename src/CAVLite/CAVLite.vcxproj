@@ -153,6 +153,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AgentInputFeeder.cpp" />
     <ClCompile Include="CACF.cpp">
       <ConformanceMode Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ConformanceMode>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
@@ -172,6 +173,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Agent.h" />
+    <ClInclude Include="AgentInputFeeder.h" />
+    <ClInclude Include="AgentRawInput.h" />
     <ClInclude Include="CACF.h" />
     <ClInclude Include="config.h" />
     <ClInclude Include="CSVParser.h" />

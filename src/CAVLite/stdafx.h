@@ -16,14 +16,14 @@
 #define VC_EXTRALEAn            // Exclude rarely-used stuff from Windows headers
 #endif
 
-#include <afx.h>
-#include <afxwin.h>         // MFC core and standard components
-#include <afxext.h>         // MFC extensions
+//#include <afx.h>
+//#include <afxwin.h>         // MFC core and standard components
+//#include <afxext.h>         // MFC extensions
 #ifndef _AFX_nO_OLE_SUPPORT
-#include <afxdtctl.h>           // MFC support for Internet Explorer 4 Common Controls
+//#include <afxdtctl.h>           // MFC support for Internet Explorer 4 Common Controls
 #endif
 #ifndef _AFX_nO_AFXCMn_SUPPORT
-#include <afxcmn.h>                     // MFC support for Windows Common Controls
+//#include <afxcmn.h>                     // MFC support for Windows Common Controls
 #endif // _AFX_nO_AFXCMn_SUPPORT
 
 #include <iostream>

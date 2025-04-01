@@ -4,6 +4,7 @@
 #include <iostream>
 #include "DataLoader.h"
 #include "CACF.h"
+#include "AgentInputFeeder.h"
 
 
 int main()
@@ -18,13 +19,17 @@ int main()
     simulator.SimulationInitialization();
     simulator.TrafficAssignment();
 
+    AgentInputFeeder feeder("full_agent_file.csv", simulator.simulation_step);
+    feeder.loadAllAgentsFromCSV();
+    loader.all_raw_agents = feeder.getAllAgents();
+
+
     if (simulator.cflc_model == "CACF")
         VehControllerCA::init(&net, simulator.simulation_step);
 
     int cumulative_count = 0;
     int print_frequency = round(120.0 / simulator.simulation_step);
 
-    // Run traffic simulation iteratively with dynamic agents
     for (int t = simulator.start_simu_interval_no; t <= simulator.end_simu_interval_no; t++)
     {
         // Load new agents at time step t
@@ -33,7 +38,7 @@ int main()
         // Assign paths only to newly added agents
         simulator.findPathForNewAgents();
 
-        // Run simulation step for active agents
+        // Run one simulation step for active agents
         simulator.TrafficSimulationStep(t);
 
         if (cumulative_count % print_frequency == 0)
@@ -46,8 +51,7 @@ int main()
 
     }
 
-    // Export final results
-    // simulator.exportSimulationResults();
+     simulator.exportSimulationResults();
 
     std::cout << " Done\n";
 

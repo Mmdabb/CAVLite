@@ -10,7 +10,7 @@ public:
 	Simulation()
 	{
 		number_of_agents = 0;
-		new_agents_count = 0;  // Initialize new agent tracking
+		new_agents_count = 0;  
 		data_loader = nullptr;
 	}
 
@@ -20,7 +20,7 @@ public:
 	};
 
 	int number_of_agents;
-	int new_agents_count;  // Tracks how many new agents were added in the last iteration
+	int new_agents_count;  // how many new agents were added in the last iteration
 	std::vector<Agent> agent_vector;
 
 	std::map<int, int> internal_agent_seq_no_dict;
@@ -59,10 +59,9 @@ public:
 	void loadVehicles(int t);
 
 	void exportSimulationResults();
-	void exportCompletedAgentsAtStep(const std::vector<int>& agent_ids, int t);
-
 
 	// New functions
+	void exportCompletedAgentsAtStep(const std::vector<int>& agent_ids, int t);
 	void findPathForNewAgents();  // Assign paths only for new agents
 	void TrafficSimulationStep(int t);  // Run one simulation step for all agents
 };
