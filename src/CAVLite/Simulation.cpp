@@ -320,6 +320,7 @@ void Simulation::TrafficSimulation()
 
 void Simulation::TrafficSimulationStep(int t)
 {
+	std::vector<int> agent_remove_vector;
 	// Process agents moving in the network
 	for (int i = 0; i < active_agent_vector.size(); i++)
 	{
@@ -331,9 +332,37 @@ void Simulation::TrafficSimulationStep(int t)
 				VehControllerCA::moveVeh(p_agent, t);
 
 			if (p_agent->remove_flag)
-				active_agent_vector.erase(active_agent_vector.begin() + i);
+				agent_remove_vector.push_back(p_agent->agent_id);
 		}
 	}
+
+	for (int j = 0; j < agent_remove_vector.size(); j++) {
+
+		int remove_agent_id = agent_remove_vector[j];
+		Agent* p_agent = &agent_vector[remove_agent_id];
+
+		// Decrease flow for this agent's path 
+		int number_of_links_in_path = p_agent->meso_path_link_seq_no_vector.size();
+		for (int k = 0; k < number_of_links_in_path; k++) {
+			int link_seq_no = p_agent->meso_path_link_seq_no_vector[k];
+			net->meso_link_vector[link_seq_no].flow_volume -= 1;
+
+			if (net->meso_link_vector[link_seq_no].flow_volume < 0) {
+				net->meso_link_vector[link_seq_no].flow_volume = 0;
+			}
+		}
+
+		for (auto it = active_agent_vector.begin(); it != active_agent_vector.end(); ++it) {
+			if (*it == remove_agent_id) {
+				active_agent_vector.erase(it);
+				break;
+			}
+		}
+	}
+
+	// Export completed agents to csv
+	exportCompletedAgentsAtStep(agent_remove_vector, t);
+
 
 	// Update link travel times based on updated flow
 	for (int j = 0; j < net->number_of_meso_links; j++)
@@ -351,7 +380,7 @@ void Simulation::loadVehicles(int t)
 		std::vector<Agent> new_agents;
 		data_loader->ReadNewAgentsFromFile(t, new_agents);  
 
-		// Sort new agents by departure time (locally, for efficiency)
+		// Sort new agents by departure time
 		std::sort(new_agents.begin(), new_agents.end(), [](const Agent& a, const Agent& b) {
 			return a.departure_time_in_simu_interval < b.departure_time_in_simu_interval;
 			});
@@ -399,6 +428,38 @@ void Simulation::loadVehicles(int t)
 			current_active_agent_index++;
 		}
 	}
+}
+
+
+
+void Simulation::exportCompletedAgentsAtStep(const std::vector<int>& agent_ids, int t)
+{
+	std::ofstream file("completed_agents_step.csv");  // currently overwrite each time
+	if (!file.is_open())
+	{
+		std::cerr << "Failed to write completed_agents_step.csv\n";
+		return;
+	}
+
+	file << "agent_id,o_node_id,d_node_id,departure_time,arrival_time,travel_time,node_sequence\n";
+
+	for (int agent_id : agent_ids)
+	{
+		Agent* p_agent = &agent_vector[agent_id];
+		if (!p_agent->m_bCompleteTrip) continue;
+
+		std::string path_node_sequence = std::to_string(p_agent->micro_path_node_id_vector[0]);
+		for (int j = 1; j < p_agent->micro_path_node_id_vector.size(); j++)
+		{
+			path_node_sequence += ";" + std::to_string(p_agent->micro_path_node_id_vector[j]);
+		}
+
+		file << p_agent->agent_id << "," << p_agent->meso_origin_node_id << "," << p_agent->meso_destination_node_id << ","
+			<< p_agent->departure_time_in_min << "," << p_agent->arrival_time_in_min << "," << p_agent->travel_time_in_min << ","
+			<< path_node_sequence << "\n";
+	}
+
+	file.close();
 }
 
 

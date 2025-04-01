@@ -59,6 +59,8 @@ public:
 	void loadVehicles(int t);
 
 	void exportSimulationResults();
+	void exportCompletedAgentsAtStep(const std::vector<int>& agent_ids, int t);
+
 
 	// New functions
 	void findPathForNewAgents();  // Assign paths only for new agents
