@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "DataLoader.h"
 #include "CSVParser.h"
 #include "StopProgram.h"
@@ -242,6 +242,8 @@ static vector<float*> StringCoordinateToVector(const string & s)
 		else
 		{
 			// invalid format
+			std::cout << "Warning: Invalid geometry format encountered in StringCoordinateToVector: " << s << std::endl;
+			return vector<float*>();
 		}
 	}
 
@@ -299,6 +301,10 @@ void DataLoader::readNetwork()
 			net->meso_node_id_to_seq_no_dict[mesonode.node_id] = mesonode.node_seq_no;
 
 			net->meso_node_vector.push_back(mesonode);
+
+			std::cout << "Reading node_id: " << mesonode.node_id << " -> seq_no: " << net->number_of_meso_nodes << "\n";
+			std::cout << "meso_node_vector size: " << net->meso_node_vector.size() << "\n";
+
 			net->number_of_meso_nodes++;
 		}
 	}
@@ -328,16 +334,24 @@ void DataLoader::readNetwork()
 	CCSVParser parser_meso_link;
 	if (parser_meso_link.OpenCSVFile(meso_link_filepath, true))
 	{
+		std::cout << "Field name mapping from header row (meso_links.csv):\n";
+		for (auto& p : parser_meso_link.FieldsIndices)
+			std::cout << "  [" << p.first << "] -> " << p.second << "\n";
+
 		string geometry_str;
 
 		while (parser_meso_link.ReadRecord())
 		{
 			MesoLink mesolink;
 
-			parser_meso_link.GetValueByFieldName("name", mesolink.name);
-			parser_meso_link.GetValueByFieldName("road_link_id", mesolink.link_id);
+			//parser_meso_link.GetValueByFieldName("name", mesolink.name);
+			parser_meso_link.GetValueByFieldName("link_id", mesolink.link_id);
 			parser_meso_link.GetValueByFieldName("from_node_id", mesolink.from_node_id);
 			parser_meso_link.GetValueByFieldName("to_node_id", mesolink.to_node_id);
+
+			std::cout << "Parsed from_node_id: " << mesolink.from_node_id
+				<< ", to_node_id: " << mesolink.to_node_id << std::endl;
+
 			parser_meso_link.GetValueByFieldName("length", mesolink.length);
 			parser_meso_link.GetValueByFieldName("lanes", mesolink.number_of_lanes);
 			parser_meso_link.GetValueByFieldName("free_speed", mesolink.speed_limit);
@@ -381,9 +395,22 @@ void DataLoader::readNetwork()
 
 			net->meso_link_vector.push_back(mesolink);
 
-			net->meso_node_vector[net->meso_node_id_to_seq_no_dict[mesolink.from_node_id]].m_outgoing_link_vector.push_back(mesolink.link_id);
-			net->meso_node_vector[net->meso_node_id_to_seq_no_dict[mesolink.to_node_id]].m_incoming_link_vector.push_back(mesolink.link_id);
+			int from_node_seq_no = net->meso_node_id_to_seq_no_dict[mesolink.from_node_id];
+			int to_node_seq_no = net->meso_node_id_to_seq_no_dict[mesolink.to_node_id];
+
+			if (from_node_seq_no >= net->meso_node_vector.size() || to_node_seq_no >= net->meso_node_vector.size()) {
+				std::cout << "ERROR: from_node_seq_no (" << from_node_seq_no << ") or to_node_seq_no (" << to_node_seq_no << ") out of bounds.\n";
+				continue;
+			}
+
+			net->meso_node_vector[from_node_seq_no].m_outgoing_link_vector.push_back(mesolink.link_id);
+			net->meso_node_vector[to_node_seq_no].m_incoming_link_vector.push_back(mesolink.link_id);
+
+
+			//net->meso_node_vector[net->meso_node_id_to_seq_no_dict[mesolink.from_node_id]].m_outgoing_link_vector.push_back(mesolink.link_id);
+			//net->meso_node_vector[net->meso_node_id_to_seq_no_dict[mesolink.to_node_id]].m_incoming_link_vector.push_back(mesolink.link_id);
 			net->meso_link_id_to_seq_no_dict[mesolink.link_id] = mesolink.link_seq_no;
+
 
 			net->number_of_meso_links++;
 
@@ -465,7 +492,7 @@ void DataLoader::readNetwork()
 		{
 			MicroLink microlink;
 
-			parser_micro_link.GetValueByFieldName("road_link_id", microlink.link_id);
+			parser_micro_link.GetValueByFieldName("link_id", microlink.link_id);
 			parser_micro_link.GetValueByFieldName("from_node_id", microlink.from_node_id);
 			parser_micro_link.GetValueByFieldName("to_node_id", microlink.to_node_id);
 			parser_micro_link.GetValueByFieldName("meso_link_id", microlink.macro_link_id);
@@ -491,8 +518,9 @@ void DataLoader::readNetwork()
 
 			microlink.free_flow_travel_time_in_min = microlink.length / microlink.speed_limit * 0.06;
 			//microlink.free_flow_travel_time_in_simu_interval = std::max(round(microlink.free_flow_travel_time_in_min * 60 / simulator->simulation_step), 1);
-			microlink.free_flow_travel_time_in_simu_interval =
-				std::max(static_cast<int>(round(microlink.free_flow_travel_time_in_min * 60 / simulator->simulation_step)), 1);
+			//microlink.free_flow_travel_time_in_simu_interval = std::max(static_cast<int>(round(microlink.free_flow_travel_time_in_min * 60 / simulator->simulation_step)), 1);
+			microlink.free_flow_travel_time_in_simu_interval = max(round(microlink.free_flow_travel_time_in_min * 60 / simulator->simulation_step), 1);
+
 
 
 			net->micro_link_vector.push_back(microlink);
@@ -546,15 +574,27 @@ void DataLoader::readAgent()
 {
 	cout << "Loading Agents\n";
 	CCSVParser parser_agent;
+	std::cout << "Attempting to open agent file: " << agent_filepath << std::endl;
+	std::ifstream test_file(agent_filepath);
+	if (!test_file.good()) {
+		std::cout << "File not found or cannot be opened: " << agent_filepath << std::endl;
+	}
+
 	if (parser_agent.OpenCSVFile(agent_filepath, true))
 	{
+		std::cout << "Available Fields in Agent CSV:\n";
+		for (const auto& field : parser_agent.GetHeaderList()) {
+			std::cout << " - " << field << "\n";
+		}
+
 		int agent_id;
 		float volume, volume_fraction;
 		int volume_int;
 		int o_node_id, d_node_id, o_node_no, d_node_no, o_zone_id, d_zone_id;
 		string time_period, node_sequence, link_sequence;
 		string demand_start_time, demand_end_time;
-		float demand_start_time_decimal, demand_end_time_decimal, demand_duration;
+		//float demand_start_time_decimal, demand_end_time_decimal, demand_duration;
+		float departure_time;
 
 		int node_id_int;
 		string link_key;
@@ -570,14 +610,18 @@ void DataLoader::readAgent()
 
 		MesoNode *start_node;
 
+
+
+
 		while (parser_agent.ReadRecord())
 		{
 			parser_agent.GetValueByFieldName("agent_id", agent_id);
 			parser_agent.GetValueByFieldName("o_node_id", o_node_id);
 			parser_agent.GetValueByFieldName("d_node_id", d_node_id);
-			parser_agent.GetValueByFieldName("o_node_id", o_zone_id);
-			parser_agent.GetValueByFieldName("d_node_id", d_zone_id);
-			parser_agent.GetValueByFieldName("time_period", time_period);
+			parser_agent.GetValueByFieldName("o_zone_id", o_zone_id);
+			parser_agent.GetValueByFieldName("d_zone_id", d_zone_id);
+			//parser_agent.GetValueByFieldName("time_period", time_period);
+			parser_agent.GetValueByFieldName("departure_time", departure_time);
 			parser_agent.GetValueByFieldName("volume", volume);
 			fixed_path_flag = parser_agent.GetValueByFieldName("node_sequence", node_sequence);
 
@@ -642,13 +686,22 @@ void DataLoader::readAgent()
 			else
 				volume_int = floor(volume);
 			
-			vector<string> time_period_str;
-			SplitString(time_period, time_period_str, "_");
-			demand_start_time = time_period_str[0];
-			demand_end_time = time_period_str[1];
-			time2timedecimal(demand_start_time, demand_start_time_decimal);
-			time2timedecimal(demand_end_time, demand_end_time_decimal);
-			demand_duration = demand_end_time_decimal - demand_start_time_decimal;
+			
+			// Now reading departure time from file or memory directly as a float (no need to parse)
+			//std::cout << "Processing agent_id: " << agent_id << ", time_period = '" << time_period << "'\n";
+			//vector<string> time_period_str;
+			//SplitString(time_period, time_period_str, "_");
+
+			//if (time_period_str.size() < 2) {
+			//	std::cout << "Invalid time_period format for agent " << agent_id << ": " << time_period << std::endl;
+			//	continue; // skip agent
+			//}
+
+			//demand_start_time = time_period_str[0];  
+			//demand_end_time = time_period_str[1];
+			//time2timedecimal(demand_start_time, demand_start_time_decimal);
+			//time2timedecimal(demand_end_time, demand_end_time_decimal);
+			//demand_duration = demand_end_time_decimal - demand_start_time_decimal;
 
 
 			for (int i = 0; i < volume_int; i++)
@@ -662,8 +715,9 @@ void DataLoader::readAgent()
 				agent.origin_zone_id = o_zone_id;
 				agent.destination_zone_id = d_zone_id;
 
-				random_num = u(e);
-				agent.departure_time_in_min = demand_start_time_decimal + demand_duration * random_num;
+				//random_num = u(e);
+				//agent.departure_time_in_min = demand_start_time_decimal + demand_duration * random_num;
+				agent.departure_time_in_min = departure_time;
 				agent.departure_time_in_simu_interval = round(agent.departure_time_in_min * 60 / simulator->simulation_step);
 
 				//start_link = &net->meso_link_vector[net->meso_link_id_to_seq_no_dict[start_node->m_outgoing_link_vector[0]]];		// update: collector
@@ -678,6 +732,7 @@ void DataLoader::readAgent()
 				}
 
 				simulator->agent_vector.push_back(agent);
+				simulator->loaded_agent_ids.insert(agent.agent_id);
 				simulator->number_of_agents++;
 			}
 
@@ -701,151 +756,6 @@ void DataLoader::readFlow()
 }
 
 
-
-
-void DataLoader::ReadNewAgentsFromFile(int t, std::vector<Agent>& new_agents)
-{
-	cout << "Loading New Agents\n";
-	simulator->new_agents_count = 0;
-	CCSVParser parser_agent;
-	if (parser_agent.OpenCSVFile(new_agent_filepath, true))
-	{	
-		int agent_id;
-		float volume, volume_fraction;
-		int volume_int;
-		int o_node_id, d_node_id, o_node_no, d_node_no, o_zone_id, d_zone_id;
-		string time_period, node_sequence, link_sequence;
-		string demand_start_time, demand_end_time;
-		float demand_start_time_decimal, demand_end_time_decimal, demand_duration;
-		float departure_time_in_min;
-
-		int node_id_int;
-		string link_key;
-
-		default_random_engine e;
-		e.seed((unsigned)time(NULL));
-		uniform_real_distribution<float> u(0.0, 1.0);
-		float random_num;
-
-		map<int, int>::iterator iter1;
-		map<string, int>::iterator iter2;
-		bool fixed_path_flag, path_valid_flag;
-
-		MesoNode* start_node;
-
-		while (parser_agent.ReadRecord())
-		{
-			parser_agent.GetValueByFieldName("agent_id", agent_id);
-			parser_agent.GetValueByFieldName("o_node_id", o_node_id);
-			parser_agent.GetValueByFieldName("d_node_id", d_node_id);
-			parser_agent.GetValueByFieldName("o_node_id", o_zone_id);
-			parser_agent.GetValueByFieldName("d_node_id", d_zone_id);
-			parser_agent.GetValueByFieldName("departure_time", departure_time_in_min);
-			parser_agent.GetValueByFieldName("volume", volume);
-			fixed_path_flag = parser_agent.GetValueByFieldName("node_sequence", node_sequence);
-
-			iter1 = net->meso_node_id_to_seq_no_dict.find(o_node_id);
-			if (iter1 == net->meso_node_id_to_seq_no_dict.end()) {
-				cout << "warning: from_origin_node_id " << o_node_id << "does not exist, corresponding demand will be discarded. (agent id " << agent_id << ")\n";
-				continue;
-			}
-			o_node_no = iter1->second;
-			start_node = &net->meso_node_vector[o_node_no];
-			if (start_node->m_outgoing_link_vector.size() == 0) {
-				cout << "warning: cannot find an outgoing link from origin node " << o_node_id << ", corresponding demand will be discarded. (agent id " << agent_id << ")\n";
-				continue;
-			}
-
-			iter1 = net->meso_node_id_to_seq_no_dict.find(d_node_id);
-			if (iter1 == net->meso_node_id_to_seq_no_dict.end()) {
-				cout << "warning: to_destination_node_id " << d_node_id << "does not exist, corresponding demand will be discarded. (agent id " << agent_id << ")\n";
-				continue;
-			}
-			d_node_no = iter1->second;
-
-			path_valid_flag = true;
-			vector<int> meso_path_node_no_vector, meso_path_link_seq_no_vector;
-			if (fixed_path_flag)
-			{
-				vector<string> node_sequence_str;
-				SplitString(node_sequence, node_sequence_str, ";");
-
-				for (string id_str : node_sequence_str)
-				{
-					node_id_int = stoi(id_str);
-					iter1 = net->meso_node_id_to_seq_no_dict.find(node_id_int);
-					if (iter1 == net->meso_node_id_to_seq_no_dict.end()) {
-						cout << "warning: node_id " << node_id_int << "in the node_sequence does not exist, corresponding demand will be discarded. (agent id " << agent_id << ")\n";
-						path_valid_flag = false;
-						break;
-					}
-					meso_path_node_no_vector.push_back(iter1->second);
-				}
-				for (int i = 1; i < node_sequence_str.size(); i++)
-				{
-					link_key = node_sequence_str[i - 1] + " " + node_sequence_str[i];
-					iter2 = net->meso_link_key_to_seq_no_dict.find(link_key);
-					if (iter2 == net->meso_link_key_to_seq_no_dict.end()) {
-						cout << "warning: node pair " << node_sequence_str[i - 1] << "-" << node_sequence_str[i] << " in the node_sequence does not exist, corresponding demand will be discarded. (agent id " << agent_id << ")\n";
-						path_valid_flag = false;
-						break;
-					}
-					meso_path_link_seq_no_vector.push_back(iter2->second);
-				}
-
-				if (!path_valid_flag)
-					continue;
-			}
-
-
-			random_num = u(e);
-			volume_fraction = volume - (int)volume;
-			if (volume_fraction >= random_num)
-				volume_int = ceil(volume);
-			else
-				volume_int = floor(volume);
-
-
-			for (int i = 0; i < volume_int; i++)
-			{
-				Agent agent;
-				agent.meso_origin_node_id = o_node_id;
-				agent.meso_destination_node_id = d_node_id;
-				agent.meso_origin_node_seq_no = o_node_no;
-				agent.meso_destination_node_seq_no = d_node_no;
-				agent.origin_zone_id = o_zone_id;
-				agent.destination_zone_id = d_zone_id;
-				agent.departure_time_in_min = departure_time_in_min;
-				agent.departure_time_in_simu_interval = round(agent.departure_time_in_min * 60 / simulator->simulation_step);
-
-
-				if (fixed_path_flag) {
-					agent.fixed_path_flag = true;
-					agent.meso_path_node_seq_no_vector = meso_path_node_no_vector;
-					agent.meso_path_link_seq_no_vector = meso_path_link_seq_no_vector;
-				}
-
-				if (agent.departure_time_in_simu_interval >= t)
-				{
-					new_agents.push_back(agent);
-					simulator->new_agents_count++;
-				}
-			}
-
-		}
-	}
-	else
-	{
-		string msg = "Cannot open New Agent file\n";
-		throw msg;
-	}
-
-	cout << "New Agents Loaded: ";
-	cout << simulator->new_agents_count << " new agents\n\n";
-}
-
-
-
 void DataLoader::LoadNewAgentsFromMemory(const AgentRawInput* raw_agents, int num_agents, int t, std::vector<Agent>& new_agents)
 {
 	std::cout << "Loading New Agents (from memory)\n";
@@ -856,10 +766,18 @@ void DataLoader::LoadNewAgentsFromMemory(const AgentRawInput* raw_agents, int nu
 
 	for (int i = 0; i < num_agents; ++i) {
 		const AgentRawInput& input = raw_agents[i];
+		
+		int agent_id = input.agent_id;
+		
+		if (simulator->loaded_agent_ids.find(agent_id) != simulator->loaded_agent_ids.end()) {
+			std::cout << "Skipping duplicate agent_id: " << agent_id << " at t = " << t << "\n";
+			continue;
+		}
 
 		int o_node_id = input.o_node_id;
 		int d_node_id = input.d_node_id;
-		int agent_id = input.agent_id;
+		int o_zone_id = input.o_zone_id;
+		int d_zone_id = input.d_zone_id;
 		float departure_time = input.departure_time;
 		float volume = input.volume;
 
@@ -886,10 +804,9 @@ void DataLoader::LoadNewAgentsFromMemory(const AgentRawInput* raw_agents, int nu
 		bool path_valid = true;
 		std::vector<int> node_seq_nos, link_seq_nos;
 
-		if (input.node_sequence != nullptr && std::strlen(input.node_sequence) > 0) {
-			std::string seq(input.node_sequence);
+		if (!input.node_sequence.empty()){
 			std::vector<std::string> node_ids;
-			SplitString(seq, node_ids, ";");
+			SplitString(input.node_sequence, node_ids, ";");
 
 			for (size_t j = 0; j < node_ids.size(); ++j) {
 				int node_id = std::stoi(node_ids[j]);
@@ -922,8 +839,8 @@ void DataLoader::LoadNewAgentsFromMemory(const AgentRawInput* raw_agents, int nu
 		for (int v = 0; v < volume_int; ++v) {
 			Agent agent;
 			agent.agent_id = agent_id;
-			agent.origin_zone_id = o_node_id;
-			agent.destination_zone_id = d_node_id;
+			agent.origin_zone_id = o_zone_id;
+			agent.destination_zone_id = d_zone_id;
 			agent.meso_origin_node_id = o_node_id;
 			agent.meso_destination_node_id = d_node_id;
 			agent.meso_origin_node_seq_no = o_node_no;
@@ -931,7 +848,7 @@ void DataLoader::LoadNewAgentsFromMemory(const AgentRawInput* raw_agents, int nu
 			agent.departure_time_in_min = departure_time;
 			agent.departure_time_in_simu_interval = round(departure_time * 60 / simulator->simulation_step);
 
-			if (input.node_sequence != nullptr && path_valid) {
+			if (!input.node_sequence.empty() && path_valid) {
 				agent.fixed_path_flag = true;
 				agent.meso_path_node_seq_no_vector = node_seq_nos;
 				agent.meso_path_link_seq_no_vector = link_seq_nos;
@@ -941,7 +858,11 @@ void DataLoader::LoadNewAgentsFromMemory(const AgentRawInput* raw_agents, int nu
 				new_agents.push_back(agent);
 				simulator->new_agents_count++;
 			}
+
 		}
+
+		simulator->loaded_agent_ids.insert(agent_id);
+		
 	}
 
 	std::cout << "New Agents Loaded: " << simulator->new_agents_count << " agents\n";

@@ -3,6 +3,7 @@
 #include "config.h"
 #include <queue>
 #include <iostream>
+#include <algorithm>
 
 
 void Network::init()

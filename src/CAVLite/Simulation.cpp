@@ -6,6 +6,7 @@
 #include <fstream>
 #include "CACF.h"
 #include "StopProgram.h"
+#include "AgentRawInput.h"
 
 void Simulation::SimulationInitialization()
 {
@@ -265,59 +266,6 @@ void Simulation::TrafficAssignment()
 }
 
 
-void Simulation::TrafficSimulation()
-{
-	if (cflc_model == "CACF")
-		VehControllerCA::init(net, simulation_step);
-
-	int cumulative_count = 0;
-	int print_frequency = round(120.0 / simulation_step);
-	float simulation_min;
-
-	int agent_idd = -1;
-
-	for (int t = start_simu_interval_no; t <= end_simu_interval_no; t++)
-	{
-		loadVehicles(t);
-		std::vector<int> agent_remove_vector;
-
-		for (int i = 0; i < active_agent_vector.size(); i++)
-		{
-			Agent* p_agent = &agent_vector[active_agent_vector[i]];
-			if (p_agent->m_Veh_LinkDepartureTime_in_simu_interval.back() == t)
-			{
-				agent_idd = p_agent->agent_id;
-
-				if (cflc_model == "CACF")
-					VehControllerCA::moveVeh(p_agent, t);
-				if (p_agent->remove_flag)
-					agent_remove_vector.push_back(p_agent->agent_id);
-			}
-
-		}
-
-		for (int j = 0; j < agent_remove_vector.size(); j++) {
-			for (std::vector<int>::iterator it = active_agent_vector.begin(); it != active_agent_vector.end(); it++) {
-				if (*it == agent_remove_vector[j]) {
-					active_agent_vector.erase(it);
-					break;
-				}
-			}
-		}
-
-		if (cumulative_count % print_frequency == 0)
-		{
-			simulation_min = t * simulation_step / 60.0;
-			printf("\rTraffic Simulation...%.1f|%.1f(current time|end time)", simulation_min, simulation_end_time);
-		}
-		cumulative_count++;
-
-	}
-	std::cout << " Done\n";
-}
-
-
-
 void Simulation::TrafficSimulationStep(int t)
 {
 	std::vector<int> agent_remove_vector;
@@ -361,7 +309,7 @@ void Simulation::TrafficSimulationStep(int t)
 	}
 
 	// Export completed agents to csv
-	exportCompletedAgentsAtStep(agent_remove_vector, t);
+	//exportCompletedAgentsAtStep(agent_remove_vector, t);
 
 
 	// Update link travel times based on updated flow
@@ -372,26 +320,11 @@ void Simulation::TrafficSimulationStep(int t)
 }
 
 
-void Simulation::loadVehicles(int t)
+void Simulation::loadVehicles(int t, std::vector<Agent>& new_agents)
 {
 	if ((t - start_simu_interval_no) % number_of_simu_interval_per_min == 0)
 	{
-		// Read new agents from DataLoader
-		std::vector<Agent> new_agents;
-		//data_loader->ReadNewAgentsFromFile(t, new_agents);  
-
-		std::vector<AgentRawInput> filtered_inputs;
-		double lower = t * simulation_step;
-		double upper = (t + 1) * simulation_step;
-
-		for (const auto& raw : data_loader->all_raw_agents) {
-			if (raw.departure_time >= lower && raw.departure_time < upper) {
-				filtered_inputs.push_back(raw);
-			}
-		}
-
-		data_loader->LoadNewAgentsFromMemory(filtered_inputs.data(), static_cast<int>(filtered_inputs.size()), t, new_agents);
-
+		//std::vector<Agent> new_agents;
 		// Sort new agents by departure time
 		std::sort(new_agents.begin(), new_agents.end(), [](const Agent& a, const Agent& b) {
 			return a.departure_time_in_simu_interval < b.departure_time_in_simu_interval;
@@ -491,12 +424,30 @@ void Simulation::exportSimulationResults()
 	fileOutputAgent << "agent_id,o_zone_id,d_zone_id,path_id,o_node_id,d_node_id,agent_type,demand_period,time_period,"\
 		"volume,cost,departure_time_in_min,arrival_time_in_min,travel_time,complete_flag,distance,opti_cost,oc_diff,relative_diff,node_sequence,link_sequence,time_sequence,time_decimal_sequence\n";
 
-
+	int count = 0;
 	for (int i = 0; i < number_of_agents; i++)
-	{
+	{	
 		Agent* p_agent = &agent_vector[i];
 
-		if (!p_agent->m_bGenereated) continue;
+		//if (!p_agent->m_bGenereated) continue;
+
+		if (!p_agent->m_bGenereated ||
+			p_agent->micro_path_node_id_vector.empty() ||
+			p_agent->m_Veh_LinkDepartureTime_in_simu_interval.empty() ||
+			p_agent->micro_path_link_id_vector.empty())
+		{
+			/*std::cout << "Skipping agent " << p_agent->agent_id << " due to incomplete trip data:\n";
+			std::cout << "  m_bGenereated: " << p_agent->m_bGenereated << "\n";
+			std::cout << "  micro_path_node_id_vector size: " << p_agent->micro_path_node_id_vector.size() << "\n";
+			std::cout << "  m_Veh_LinkDepartureTime_in_simu_interval size: " << p_agent->m_Veh_LinkDepartureTime_in_simu_interval.size() << "\n";
+			std::cout << "  micro_path_link_id_vector size: " << p_agent->micro_path_link_id_vector.size() << "\n";
+			std::cout << "  o_node_id: " << p_agent->meso_origin_node_id
+				<< ", d_node_id: " << p_agent->meso_destination_node_id << "\n";*/
+
+			continue;
+		}
+
+		count++;
 
 		int number_of_nodes = p_agent->micro_path_node_id_vector.size();
 		std::string complete_flag = p_agent->m_bCompleteTrip ? "c" : "n";
@@ -520,6 +471,9 @@ void Simulation::exportSimulationResults()
 			p_agent->travel_time_in_min << "," << complete_flag << ",,,,," << path_node_sequence << "," << path_link_sequence << ",," <<
 			path_time_sequence << "\n";
 	}
+
+	std::cout << "Exported " << count << " agents successfully out of " << number_of_agents << ".\n";
+
 	fileOutputAgent.close();
 	std::cout << "Done\n";
 

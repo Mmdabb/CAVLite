@@ -4,6 +4,7 @@
 #include "Simulation.h"
 #include "Network.h"
 #include "Agent.h"
+#include "AgentRawInput.h"
 
 class DataLoader
 {
@@ -32,7 +33,6 @@ public:
 	void readFlow();
 
 	// New Function: Reads new agents dynamically
-	void ReadNewAgentsFromFile(int t, std::vector<Agent>& new_agents);
 	void LoadNewAgentsFromMemory(const AgentRawInput* raw_agents, int num_agents, int t, std::vector<Agent>& new_agents);
 
 };

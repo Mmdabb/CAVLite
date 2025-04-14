@@ -2,7 +2,9 @@
 #include "Agent.h"
 #include <map>
 #include "Network.h"
-#include "DataLoader.h" 
+#include <unordered_set>
+
+//#include "DataLoader.h" 
 
 class Simulation
 {
@@ -11,7 +13,7 @@ public:
 	{
 		number_of_agents = 0;
 		new_agents_count = 0;  
-		data_loader = nullptr;
+		//data_loader = nullptr;
 	}
 
 	enum SimulationState {
@@ -22,6 +24,7 @@ public:
 	int number_of_agents;
 	int new_agents_count;  // how many new agents were added in the last iteration
 	std::vector<Agent> agent_vector;
+	std::unordered_set<int> loaded_agent_ids;
 
 	std::map<int, int> internal_agent_seq_no_dict;
 	std::vector<Agent> active_agent_queue;
@@ -43,7 +46,7 @@ public:
 	Network* net;
 	std::string cflc_model;
 
-	DataLoader* data_loader;
+	//DataLoader* data_loader;
 
 	int* node_predecessor;
 	float* node_label_cost;
@@ -55,8 +58,9 @@ public:
 	int MacroShortestPath(int origin_node_id, int destination_node_id);
 	void findPathForAgents(int iteration_no);
 	void TrafficAssignment();
-	void TrafficSimulation();
-	void loadVehicles(int t);
+	//void TrafficSimulation();
+	//void loadVehicles(int t);
+	void loadVehicles(int t, std::vector<Agent>& new_agents);
 
 	void exportSimulationResults();
 
