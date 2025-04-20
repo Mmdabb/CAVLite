@@ -63,6 +63,7 @@ public:
 	void loadVehicles(int t, std::vector<Agent>& new_agents);
 
 	void exportSimulationResults();
+	void exportInitialAssignment(const std::string& filename);
 
 	// New functions
 	void exportCompletedAgentsAtStep(const std::vector<int>& agent_ids, int t);

@@ -18,6 +18,8 @@ int main()
     simulator.net = &net;
     simulator.SimulationInitialization();
     simulator.TrafficAssignment();
+    simulator.exportInitialAssignment("initial_assignment_results.csv");
+
 
     AgentInputFeeder feeder("full_agent_file.csv", simulator.simulation_step);
     feeder.loadAllAgentsFromCSV();

@@ -481,3 +481,45 @@ void Simulation::exportSimulationResults()
 	getchar();
 	exit(0);
 }
+
+
+void Simulation::exportInitialAssignment(const std::string& filename) {
+	std::ofstream file(filename);
+	if (!file.is_open()) {
+		std::cerr << "Error opening file for initial assignment export: " << filename << "\n";
+		return;
+	}
+
+	file << "agent_id,o_node_id,d_node_id,path_cost,path_node_seq,path_link_seq\n";
+
+	for (const auto& agent : agent_vector) {
+		if (agent.meso_path_node_seq_no_vector.empty() && agent.meso_path_link_seq_no_vector.empty())
+			continue;
+
+		file << agent.agent_id << ","
+			<< agent.meso_origin_node_id << ","
+			<< agent.meso_destination_node_id << ","
+			<< agent.path_cost << ",";
+
+		// meso node sequence (by node ID)
+		for (size_t i = 0; i < agent.meso_path_node_seq_no_vector.size(); ++i) {
+			int node_seq = agent.meso_path_node_seq_no_vector[i];
+			file << net->meso_node_vector[node_seq].node_id;
+			if (i != agent.meso_path_node_seq_no_vector.size() - 1)
+				file << ";";
+		}
+		file << ",";
+
+		// meso link sequence (by link ID)
+		for (size_t i = 0; i < agent.meso_path_link_seq_no_vector.size(); ++i) {
+			int link_seq = agent.meso_path_link_seq_no_vector[i];
+			file << net->meso_link_vector[link_seq].link_id;
+			if (i != agent.meso_path_link_seq_no_vector.size() - 1)
+				file << ";";
+		}
+		file << "\n";
+	}
+
+	file.close();
+	std::cout << "Initial assignment exported to: " << filename << "\n";
+}
