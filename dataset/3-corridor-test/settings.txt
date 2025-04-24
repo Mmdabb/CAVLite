@@ -1,0 +1,12 @@
+micronode_filepath=micro_nodes.csv
+microlink_filepath=micro_links.csv
+mesonode_filepath=meso_nodes.csv
+mesolink_filepath=meso_links.csv
+coordinate_type=lonlat
+agent_filepath=agents.csv
+total_assignment_iterations=10
+simulation_start_time=0700
+simulation_end_time=0800
+simulation_step=1.0
+output_filename=output_agent.csv
+cflc_model=CACF;1.5
