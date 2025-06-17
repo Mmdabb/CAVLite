@@ -20,6 +20,18 @@ set(SOURCES
     # ${SRC_DIR}/SimulationAPI.cpp  # Optional
 )
 
-add_library(CAVLite SHARED ${SOURCES})
+add_library(CAVLite SHARED
+    DataLoader.cpp
+    Simulation.cpp
+    Network.cpp
+    CACF.cpp
+    AgentInputFeeder.cpp
+    CSVParser.cpp
+    StopProgram.cpp
+    # and headers if needed
+)
+
+target_include_directories(CAVLite PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
 
 target_include_directories(CAVLite PUBLIC ${SRC_DIR})
