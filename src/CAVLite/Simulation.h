@@ -64,6 +64,7 @@ public:
 
 	void exportSimulationResults();
 	void exportInitialAssignment(const std::string& filename);
+	void exportLinkPerformance(const std::string& filename);
 
 	// New functions
 	void exportCompletedAgentsAtStep(const std::vector<int>& agent_ids, int t);

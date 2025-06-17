@@ -770,7 +770,7 @@ void DataLoader::LoadNewAgentsFromMemory(const AgentRawInput* raw_agents, int nu
 		int agent_id = input.agent_id;
 		
 		if (simulator->loaded_agent_ids.find(agent_id) != simulator->loaded_agent_ids.end()) {
-			std::cout << "Skipping duplicate agent_id: " << agent_id << " at t = " << t << "\n";
+			//std::cout << "Skipping duplicate agent_id: " << agent_id << " at t = " << t << "\n";
 			continue;
 		}
 

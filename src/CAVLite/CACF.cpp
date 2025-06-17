@@ -42,12 +42,16 @@ void VehControllerCA::init(Network *net_, float simulation_step_)
 
 void VehControllerCA::moveVeh(Agent *p_agent, int t)
 {
-	MicroNode *current_node = &net->micro_node_vector[p_agent->micro_path_node_seq_no_vector.back()];
+	// micro_path_node_seq_no_vector contains the sequence number (vector index) of the node along the agent path. 
+	// It start with the sequence number of the micro origin node.
+	// Each time the load vehicle is called, for new agents with feasible path and 
+	// within the current time interval we set m_generated to True and push the micro origin node to this vector
+	MicroNode *current_node = &net->micro_node_vector[p_agent->micro_path_node_seq_no_vector.back()]; 
 	int current_node_idd = current_node->node_id;
 
 	int node_time_headway_in_simu_interval;
 	map<int, int>::iterator iter_hw;
-	iter_hw = safe_headway_in_simu_interval_dict.find(current_node->node_id);
+	iter_hw = safe_headway_in_simu_interval_dict.find(current_node->node_id); // default headway or headway from file
 	if (iter_hw != safe_headway_in_simu_interval_dict.end())
 		node_time_headway_in_simu_interval = iter_hw->second;
 	else
@@ -57,7 +61,16 @@ void VehControllerCA::moveVeh(Agent *p_agent, int t)
 	std::vector<int>::iterator ret;
 	ret = std::find(net->meso_link_vector[p_agent->current_macro_link_seq_no].micro_outgoing_node_id_vector.begin(),
 		net->meso_link_vector[p_agent->current_macro_link_seq_no].micro_outgoing_node_id_vector.end(), current_node->node_id);
-
+	// Find the current micro node of the agent and first check if its the last node in the outgoing node vector of the current macro (meso) link;
+	// if its not the last micro outgoing node, then check meso link sequence to see 
+	// if the current macro (meso) path seq (seq of link traversed so far) is the last meso link of this agent path
+	// if it is the last link, then we mark the agent as completed and mark it to be removed; 
+	// else we incerement the macro path seq which keep track of how many macro (meso) links the agent traversed.
+	// Then set the current macro link seq no to the meso path link seq no vector for the updated seq no of links agent would traversed (current macro path seq no).
+	// If the updated current macro path seq is not the index of the last link in the agent meso path link vector, then we assigned the next macro (meso) link
+	// else we set the next macro link to -1.
+	// The current macro link seq keep track of link seq number (or index) within the meso path link seq vector 
+	// while current path seq no keep tracks of how many links travesered by the agent so far. Ideally this two should be same????
 	if (ret != net->meso_link_vector[p_agent->current_macro_link_seq_no].micro_outgoing_node_id_vector.end())
 	{
 		if (p_agent->current_macro_path_seq_no == p_agent->meso_path_link_seq_no_vector.size() - 1)
@@ -97,6 +110,8 @@ void VehControllerCA::moveVeh(Agent *p_agent, int t)
 
 	float tree_cost;
 
+	// under development: allows only certain micro nodes to be allowed for next movement; skip
+	// white list dict can be populated in simulation initialization or in generate tree cost in network initialization
 	bool whitelist_flag = false;
 	std::vector<int> whitelist_vector;
 	std::map<int, std::map<int, std::vector<int>>>::iterator iter1 = net->meso_link_vector[p_agent->current_macro_link_seq_no].white_list_dict.find(p_agent->next_macro_link_seq_no);

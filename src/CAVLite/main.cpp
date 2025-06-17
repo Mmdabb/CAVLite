@@ -5,7 +5,9 @@
 #include "DataLoader.h"
 #include "CACF.h"
 #include "AgentInputFeeder.h"
+#include <fstream>
 
+std::ofstream debug_log_file("backward_tree_debug.txt");
 
 int main()
 {
@@ -19,6 +21,7 @@ int main()
     simulator.SimulationInitialization();
     simulator.TrafficAssignment();
     simulator.exportInitialAssignment("initial_assignment_results.csv");
+    simulator.exportLinkPerformance("initial_meso_link_performance.csv");
 
 
     AgentInputFeeder feeder("full_agent_file.csv", simulator.simulation_step);
@@ -81,6 +84,6 @@ int main()
     simulator.exportSimulationResults();
 
     std::cout << " Done\n";
-
+    debug_log_file.close();
     return 0;
 }

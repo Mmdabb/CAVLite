@@ -123,7 +123,8 @@ void Simulation::findPathForAgents(int iteration_no)
 			continue;
 		}
 
-		if (i % (iteration_no + 1) != 0)
+		//if (false)
+		if (i % (iteration_no + 1) != 0) // only updates part of agents at each iteration of traffic assignment. 
 		{
 			int number_of_links_in_path = p_agent->meso_path_link_seq_no_vector.size();
 			for (int j = 0; j < number_of_links_in_path; j++)
@@ -436,13 +437,13 @@ void Simulation::exportSimulationResults()
 			p_agent->m_Veh_LinkDepartureTime_in_simu_interval.empty() ||
 			p_agent->micro_path_link_id_vector.empty())
 		{
-			/*std::cout << "Skipping agent " << p_agent->agent_id << " due to incomplete trip data:\n";
+			std::cout << "Skipping agent " << p_agent->agent_id << " due to incomplete trip data:\n";
 			std::cout << "  m_bGenereated: " << p_agent->m_bGenereated << "\n";
 			std::cout << "  micro_path_node_id_vector size: " << p_agent->micro_path_node_id_vector.size() << "\n";
 			std::cout << "  m_Veh_LinkDepartureTime_in_simu_interval size: " << p_agent->m_Veh_LinkDepartureTime_in_simu_interval.size() << "\n";
 			std::cout << "  micro_path_link_id_vector size: " << p_agent->micro_path_link_id_vector.size() << "\n";
 			std::cout << "  o_node_id: " << p_agent->meso_origin_node_id
-				<< ", d_node_id: " << p_agent->meso_destination_node_id << "\n";*/
+				<< ", d_node_id: " << p_agent->meso_destination_node_id << "\n";
 
 			continue;
 		}
@@ -490,16 +491,36 @@ void Simulation::exportInitialAssignment(const std::string& filename) {
 		return;
 	}
 
-	file << "agent_id,o_node_id,d_node_id,path_cost,path_node_seq,path_link_seq\n";
+	//file << "agent_id,o_node_id,d_node_id,path_cost,path_node_seq,path_link_seq\n";
+	file << "agent_id,o_node_id,d_node_id,travel_time,total_fftt,path_node_seq,path_link_seq\n";
+
 
 	for (const auto& agent : agent_vector) {
 		if (agent.meso_path_node_seq_no_vector.empty() && agent.meso_path_link_seq_no_vector.empty())
 			continue;
 
+		// total free-flow travel time
+		double total_fftt = 0.0;
+		for (size_t i = 0; i < agent.meso_path_link_seq_no_vector.size(); ++i) {
+			int link_seq = agent.meso_path_link_seq_no_vector[i];
+			total_fftt += net->meso_link_vector[link_seq].free_flow_travel_time_in_min;
+		}
+
 		file << agent.agent_id << ","
 			<< agent.meso_origin_node_id << ","
 			<< agent.meso_destination_node_id << ","
-			<< agent.path_cost << ",";
+			<< agent.path_cost << ","
+			<< total_fftt << ",";
+
+
+		//// free-flow travel time sequence (in minutes)
+		//for (size_t i = 0; i < agent.meso_path_link_seq_no_vector.size(); ++i) {
+		//	int link_seq = agent.meso_path_link_seq_no_vector[i];
+		//	file << net->meso_link_vector[link_seq].free_flow_travel_time_in_min;
+		//	if (i != agent.meso_path_link_seq_no_vector.size() - 1)
+		//		file << ";";
+		//}
+		//file << ",";
 
 		// meso node sequence (by node ID)
 		for (size_t i = 0; i < agent.meso_path_node_seq_no_vector.size(); ++i) {
@@ -522,4 +543,27 @@ void Simulation::exportInitialAssignment(const std::string& filename) {
 
 	file.close();
 	std::cout << "Initial assignment exported to: " << filename << "\n";
+}
+
+
+void Simulation::exportLinkPerformance(const std::string& filename) {
+	std::ofstream file(filename);
+	if (!file.is_open()) {
+		std::cerr << "Error opening link performance file: " << filename << "\n";
+		return;
+	}
+
+	// Header
+	file << "link_id,from_node_id,to_node_id,flow_volume,travel_time\n";
+
+	for (const auto& link : net->meso_link_vector) {
+		file << link.link_id << ","
+			<< link.from_node_id << ","
+			<< link.to_node_id << ","
+			<< link.flow_volume << ","
+			<< link.cost << "\n";  // or travel_time_in_min if more appropriate
+	}
+
+	file.close();
+	std::cout << "Exported meso link performance to: " << filename << "\n";
 }
