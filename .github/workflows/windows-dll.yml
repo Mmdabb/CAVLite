@@ -1,0 +1,30 @@
+name: Build DLL on Windows
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up CMake
+      uses: jwlawson/actions-setup-cmake@v1
+
+    - name: Configure
+      run: cmake -S . -B build -DCMAKE_GENERATOR_PLATFORM=x64
+
+    - name: Build
+      run: cmake --build build --config Release
+
+    - name: Upload DLL
+      uses: actions/upload-artifact@v4
+      with:
+        name: cavlite-dll
+        path: build/Release/*.dll
