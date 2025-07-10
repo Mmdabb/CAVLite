@@ -10,12 +10,12 @@
 #include <cstring>
 
 
-extern std::ofstream debug_log_file;
+//extern std::ofstream debug_log_file;
 
-void printBackwardTree(int movement_id, MesoLink* p_link);
-void validateBackwardTree(int movement_id, MesoLink* p_link);
-void dumpBackwardTreeToTXT(int movement_id, MesoLink* p_link);
-void dumpTurningMIDNodesToTXT(int movement_id, MesoLink* p_link, Network* net);
+//void printBackwardTree(int movement_id, MesoLink* p_link);
+//void validateBackwardTree(int movement_id, MesoLink* p_link);
+//void dumpBackwardTreeToTXT(int movement_id, MesoLink* p_link);
+//void dumpTurningMIDNodesToTXT(int movement_id, MesoLink* p_link, Network* net);
 
 
 void Network::init()
@@ -67,11 +67,11 @@ void Network::getMicroInOutNodesOfMesolink()
 
 void Network::generateCostTree()
 {
-	// ==== Begin: Prepare debug output folder ====
-	debug_log_file << "=== Begin Backward Tree Construction Log ===\n";
-	_mkdir("output");
-	_mkdir("output/debug");
-	// ==== End ====
+	//// ==== Begin: Prepare debug output folder ====
+	//debug_log_file << "=== Begin Backward Tree Construction Log ===\n";
+	//_mkdir("output");
+	//_mkdir("output/debug");
+	//// ==== End ====
 
 
 	MesoLink *from_link, *to_link;
@@ -215,25 +215,25 @@ void Network::generateCostTree()
 				{
 					float *micro_node_label_cost = MicroShortestPath(iter->second[j], p_link);
 
-					if (!micro_node_label_cost) {
-						debug_log_file << "[WARNING] MID node seq_no " << iter->second[j]
-							<< " in movement " << iter->first << " on meso link "
-								<< p_link->link_id << " returned null cost array (no incoming links).\n";
-							//continue; not continue now for debugging
-					}
+					//if (!micro_node_label_cost) {
+					//	debug_log_file << "[WARNING] MID node seq_no " << iter->second[j]
+					//		<< " in movement " << iter->first << " on meso link "
+					//			<< p_link->link_id << " returned null cost array (no incoming links).\n";
+					//		//continue; not continue now for debugging
+					//}
 
 					// ==== Begin: Debug MID node usage ====
-					std::cout << "[DEBUG] Using MID nodes for movement " << iter->first
-						<< " on meso link " << p_link->link_id << ":\n";
-					for (int k = 0; k < iter->second.size(); ++k) {
-						int seq_no = iter->second[k];
-						//int node_id = net->micro_node_vector[seq_no].node_id;
-						int node_id = this->micro_node_vector[seq_no].node_id;
+					//std::cout << "[DEBUG] Using MID nodes for movement " << iter->first
+					//	<< " on meso link " << p_link->link_id << ":\n";
+					//for (int k = 0; k < iter->second.size(); ++k) {
+					//	int seq_no = iter->second[k];
+					//	//int node_id = net->micro_node_vector[seq_no].node_id;
+					//	int node_id = this->micro_node_vector[seq_no].node_id;
 
-						//std::cout << "  MID node: id = " << node_id << ", seq_no = " << seq_no << "\n";
-						debug_log_file << "MID node: id = " << node_id << ", seq_no = " << seq_no << "\n";
+					//	//std::cout << "  MID node: id = " << node_id << ", seq_no = " << seq_no << "\n";
+					//	debug_log_file << "MID node: id = " << node_id << ", seq_no = " << seq_no << "\n";
 
-					}
+					//}
 					// ==== End: Debug MID node usage ====
 
 
@@ -249,12 +249,12 @@ void Network::generateCostTree()
 					delete micro_node_label_cost;
 				}
 
-				// ==== Begin: Print and validate backward tree ====
-				printBackwardTree(iter->first, p_link);
-				validateBackwardTree(iter->first, p_link);
-				dumpTurningMIDNodesToTXT(iter->first, p_link, this);
-				dumpBackwardTreeToTXT(iter->first, p_link);
-				// ==== End: Print and validate backward tree ====
+				//// ==== Begin: Print and validate backward tree ====
+				//printBackwardTree(iter->first, p_link);
+				//validateBackwardTree(iter->first, p_link);
+				//dumpTurningMIDNodesToTXT(iter->first, p_link, this);
+				//dumpBackwardTreeToTXT(iter->first, p_link);
+				//// ==== End: Print and validate backward tree ====
 
 				iter++;
 			}
@@ -345,61 +345,62 @@ float * Network::MicroShortestPath(int destination_node_seq_no, MesoLink * mesol
 
 
 // ==== Begin: Debug print and validation for backward tree ====
-void printBackwardTree(int movement_id, MesoLink* p_link) {
-	debug_log_file << "\n[DEBUG] Backward Tree for movement " << movement_id
-		<< " on meso link " << p_link->link_id << ":\n";
 
-	auto& cost_tree = p_link->estimated_cost_tree_for_each_movement[movement_id];
-	for (std::map<int, float>::iterator it = cost_tree.begin(); it != cost_tree.end(); ++it) {
-		debug_log_file << "NodeSeqNo: " << it->first << ", Cost: " << it->second << "\n";
-	}
-}
-
-
-void validateBackwardTree(int movement_id, MesoLink* p_link) {
-	auto& cost_tree = p_link->estimated_cost_tree_for_each_movement[movement_id];
-	bool has_valid_path = false;
-	for (std::map<int, float>::iterator it = cost_tree.begin(); it != cost_tree.end(); ++it) {
-		if (it->second < _MAX_COST_TREE) {
-			has_valid_path = true;
-			break;
-		}
-	}
-	if (!has_valid_path) {
-		std::cerr << "[ERROR] No valid path found in backward tree for movement "
-			<< movement_id << " on meso link " << p_link->link_id << std::endl;
-	}
-}
+//void printBackwardTree(int movement_id, MesoLink* p_link) {
+//	debug_log_file << "\n[DEBUG] Backward Tree for movement " << movement_id
+//		<< " on meso link " << p_link->link_id << ":\n";
+//
+//	auto& cost_tree = p_link->estimated_cost_tree_for_each_movement[movement_id];
+//	for (std::map<int, float>::iterator it = cost_tree.begin(); it != cost_tree.end(); ++it) {
+//		debug_log_file << "NodeSeqNo: " << it->first << ", Cost: " << it->second << "\n";
+//	}
+//}
 
 
-void dumpBackwardTreeToTXT(int movement_id, MesoLink* p_link) {
-	std::string filename = "output/debug/tree_" + std::to_string(p_link->link_id) + "_" +
-		std::to_string(movement_id) + ".txt";
-	std::ofstream file(filename.c_str());
+//void validateBackwardTree(int movement_id, MesoLink* p_link) {
+//	auto& cost_tree = p_link->estimated_cost_tree_for_each_movement[movement_id];
+//	bool has_valid_path = false;
+//	for (std::map<int, float>::iterator it = cost_tree.begin(); it != cost_tree.end(); ++it) {
+//		if (it->second < _MAX_COST_TREE) {
+//			has_valid_path = true;
+//			break;
+//		}
+//	}
+//	if (!has_valid_path) {
+//		std::cerr << "[ERROR] No valid path found in backward tree for movement "
+//			<< movement_id << " on meso link " << p_link->link_id << std::endl;
+//	}
+//}
 
-	file << "NodeSeqNo,Cost\n";
-	auto& cost_tree = p_link->estimated_cost_tree_for_each_movement[movement_id];
-	for (std::map<int, float>::iterator it = cost_tree.begin(); it != cost_tree.end(); ++it) {
-		file << it->first << "," << it->second << "\n";
-	}
-	file.close();
-}
 
-void dumpTurningMIDNodesToTXT(int movement_id, MesoLink* p_link, Network* net) {
-	std::string filename = "output/debug/mid_nodes_link" + std::to_string(p_link->link_id) +
-		"_move" + std::to_string(movement_id) + ".txt";
+//void dumpBackwardTreeToTXT(int movement_id, MesoLink* p_link) {
+//	std::string filename = "output/debug/tree_" + std::to_string(p_link->link_id) + "_" +
+//		std::to_string(movement_id) + ".txt";
+//	std::ofstream file(filename.c_str());
+//
+//	file << "NodeSeqNo,Cost\n";
+//	auto& cost_tree = p_link->estimated_cost_tree_for_each_movement[movement_id];
+//	for (std::map<int, float>::iterator it = cost_tree.begin(); it != cost_tree.end(); ++it) {
+//		file << it->first << "," << it->second << "\n";
+//	}
+//	file.close();
+//}
 
-	std::ofstream file(filename.c_str());
-	file << "NodeID,NodeSeqNo,X,Y\n";
-
-	const std::vector<int>& node_seq_nos = p_link->turning_node_seq_no_dict[movement_id];
-	for (size_t i = 0; i < node_seq_nos.size(); ++i) {
-		int seq_no = node_seq_nos[i];
-		const MicroNode& node = net->micro_node_vector[seq_no];
-		file << node.node_id << "," << seq_no << "," << node.x << "," << node.y << "\n";
-	}
-
-	file.close();
-}
+//void dumpTurningMIDNodesToTXT(int movement_id, MesoLink* p_link, Network* net) {
+//	std::string filename = "output/debug/mid_nodes_link" + std::to_string(p_link->link_id) +
+//		"_move" + std::to_string(movement_id) + ".txt";
+//
+//	std::ofstream file(filename.c_str());
+//	file << "NodeID,NodeSeqNo,X,Y\n";
+//
+//	const std::vector<int>& node_seq_nos = p_link->turning_node_seq_no_dict[movement_id];
+//	for (size_t i = 0; i < node_seq_nos.size(); ++i) {
+//		int seq_no = node_seq_nos[i];
+//		const MicroNode& node = net->micro_node_vector[seq_no];
+//		file << node.node_id << "," << seq_no << "," << node.x << "," << node.y << "\n";
+//	}
+//
+//	file.close();
+//}
 
 // ==== End: Debug print and validation for backward tree ====

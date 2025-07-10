@@ -1,8 +1,15 @@
 #include "CACF.h"
-#include "stdafx.h"
 #include "CSVParser.h"
 #include "config.h"
+
 #include <iostream>
+#include <vector>
+#include <map>
+#include <cmath>
+#include <algorithm>
+#include <cstdlib>  // for rand(), RAND_MAX
+
+
 
 
 float VehControllerCA::default_time_headway;

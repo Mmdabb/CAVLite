@@ -8,6 +8,6 @@ struct AgentRawInput {
     int d_zone_id;
     float departure_time;
     float volume;
-    // const char* node_sequence;  // or std::string if not exporting as DLL
-    std::string node_sequence;
+    const char* node_sequence;  // or std::string if not exporting as DLL
+    //std::string node_sequence;
 };

@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="DataLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -33,10 +30,10 @@
     <ClCompile Include="StopProgram.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AgentInputFeeder.cpp">
+    <ClCompile Include="CSVParser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CSVParser.cpp">
+    <ClCompile Include="SimulationAPI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -53,9 +50,6 @@
     <ClInclude Include="DataLoader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="stdafx.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="StopProgram.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -68,10 +62,10 @@
     <ClInclude Include="CSVParser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AgentRawInput.h">
+    <ClInclude Include="SimulationAPI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AgentInputFeeder.h">
+    <ClInclude Include="AgentRawInput.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

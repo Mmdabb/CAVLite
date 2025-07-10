@@ -1,14 +1,22 @@
-﻿#include "stdafx.h"
-#include "DataLoader.h"
+﻿#include "DataLoader.h"
 #include "CSVParser.h"
 #include "StopProgram.h"
-#include <random>
-#include <ctime>
-#include <math.h>
 #include "config.h"
 #include "CACF.h"
 #include "AgentRawInput.h"
+#define NOMINMAX
+
+#include <random>
+#include <ctime>
+#include <cmath>        // use <cmath> instead of <math.h>
 #include <algorithm>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <map>
+
+
 
 
 
@@ -519,7 +527,9 @@ void DataLoader::readNetwork()
 			microlink.free_flow_travel_time_in_min = microlink.length / microlink.speed_limit * 0.06;
 			//microlink.free_flow_travel_time_in_simu_interval = std::max(round(microlink.free_flow_travel_time_in_min * 60 / simulator->simulation_step), 1);
 			//microlink.free_flow_travel_time_in_simu_interval = std::max(static_cast<int>(round(microlink.free_flow_travel_time_in_min * 60 / simulator->simulation_step)), 1);
-			microlink.free_flow_travel_time_in_simu_interval = max(round(microlink.free_flow_travel_time_in_min * 60 / simulator->simulation_step), 1);
+			//microlink.free_flow_travel_time_in_simu_interval = std::max(round(microlink.free_flow_travel_time_in_min * 60 / simulator->simulation_step), 1);
+			microlink.free_flow_travel_time_in_simu_interval = std::max(static_cast<int>(round(microlink.free_flow_travel_time_in_min * 60 / simulator->simulation_step)), 1);
+
 
 
 
@@ -757,13 +767,16 @@ void DataLoader::readFlow()
 
 
 void DataLoader::LoadNewAgentsFromMemory(const AgentRawInput* raw_agents, int num_agents, int t, std::vector<Agent>& new_agents)
-{
-	std::cout << "Loading New Agents (from memory)\n";
+{	
+	double t_simu = t * simulator->simulation_step / 60;
+
+	std::cout << "Loading " << num_agents << " New Agents (from memory) at t = " << t_simu << "\n";
 	simulator->new_agents_count = 0;
 
 	std::default_random_engine e(static_cast<unsigned>(time(nullptr)));
 	std::uniform_real_distribution<float> u(0.0f, 1.0f);
 
+	int duplicates_count = 0;
 	for (int i = 0; i < num_agents; ++i) {
 		const AgentRawInput& input = raw_agents[i];
 		
@@ -771,6 +784,7 @@ void DataLoader::LoadNewAgentsFromMemory(const AgentRawInput* raw_agents, int nu
 		
 		if (simulator->loaded_agent_ids.find(agent_id) != simulator->loaded_agent_ids.end()) {
 			//std::cout << "Skipping duplicate agent_id: " << agent_id << " at t = " << t << "\n";
+			duplicates_count++;
 			continue;
 		}
 
@@ -804,9 +818,15 @@ void DataLoader::LoadNewAgentsFromMemory(const AgentRawInput* raw_agents, int nu
 		bool path_valid = true;
 		std::vector<int> node_seq_nos, link_seq_nos;
 
-		if (!input.node_sequence.empty()){
+		//if (!input.node_sequence.empty()){
+			//std::vector<std::string> node_ids;
+			//SplitString(input.node_sequence, node_ids, ";");
+		
+		if (input.node_sequence && input.node_sequence[0] != '\0') {
+			std::string node_seq_str(input.node_sequence);  // convert
 			std::vector<std::string> node_ids;
-			SplitString(input.node_sequence, node_ids, ";");
+			SplitString(node_seq_str, node_ids, ";");
+
 
 			for (size_t j = 0; j < node_ids.size(); ++j) {
 				int node_id = std::stoi(node_ids[j]);
@@ -848,7 +868,8 @@ void DataLoader::LoadNewAgentsFromMemory(const AgentRawInput* raw_agents, int nu
 			agent.departure_time_in_min = departure_time;
 			agent.departure_time_in_simu_interval = round(departure_time * 60 / simulator->simulation_step);
 
-			if (!input.node_sequence.empty() && path_valid) {
+			//if (!input.node_sequence.empty() && path_valid) {
+			if (input.node_sequence && input.node_sequence[0] != '\0' && path_valid) {
 				agent.fixed_path_flag = true;
 				agent.meso_path_node_seq_no_vector = node_seq_nos;
 				agent.meso_path_link_seq_no_vector = link_seq_nos;
@@ -865,5 +886,8 @@ void DataLoader::LoadNewAgentsFromMemory(const AgentRawInput* raw_agents, int nu
 		
 	}
 
-	std::cout << "New Agents Loaded: " << simulator->new_agents_count << " agents\n";
+	//std::cout << "New Agents Loaded: " << simulator->new_agents_count << " agents\n";
+	std::cout << "New Agents Loaded: " << simulator->new_agents_count
+		<< " agents; Duplicate agent IDs skipped: " << duplicates_count << "\n";
+
 }
