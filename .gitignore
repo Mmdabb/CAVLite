@@ -21,9 +21,6 @@ ipch/
 !/build/Debug/*.lib
 
 # Other Visual Studio build files
-Debug/
-Release/
-x64/
 x86/
 bin/
 obj/
@@ -49,8 +46,6 @@ obj/
 *.app
 
 # Libraries and other build outputs
-*.dll
-*.lib
 *.exp
 *.ilk
 *.iobj
